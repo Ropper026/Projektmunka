@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Agent</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Buy</a></li>
+                <li><a href="post.html">Sell</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Properties for Sale</h1>
+        <p>Welcome to the Property Agent website. Browse properties, post advertisements, or log in to your account.</p>
+    </div>
+    <div id="featured-properties"></div>
+    <script src="app.js"></script>
+    <script>
+        async function fetchFeaturedProperties() {
+            const response = await fetch("http://127.0.0.1:8000/properties/");
+            const data = await response.json();
+            const featuredDiv = document.getElementById("featured-properties");
+
+            if (data.properties.length === 0) {
+                featuredDiv.innerHTML = "<p>No properties available.</p>";
+                return;
+            }
+
+            data.properties.slice(0, 9).forEach(property => {
+                const propertyElement = document.createElement("div");
+                propertyElement.className = "property-box";
+                const imagePath = property.image_path 
+                    ? property.image_path 
+                    : "http://127.0.0.1:8000/static/Képernyőkép%202022-03-07%20173334.png";
+                const formattedPrice = property.price.toLocaleString("hu-HU");
+                propertyElement.innerHTML = `
+                    <a href="property.html?id=${property.id}" style="text-decoration:none; color:inherit;">
+                        <img src="${imagePath}" 
+                             alt="Property Image" 
+                             style="width:100%; height:150px; object-fit:cover; border-radius:6px; margin-bottom:10px;">
+                        <h3>${property.title}</h3>
+                        <p><strong>Price:</strong> ${formattedPrice} Ft</p>
+                        <p><strong>Location:</strong> ${property.location}</p>
+                    </a>
+                `;
+                featuredDiv.appendChild(propertyElement);
+            });
+        }
+
+        fetchFeaturedProperties();
+
+        function updateMenu() {
+            const sessionToken = localStorage.getItem("sessionToken");
+            const nav = document.querySelector("header nav ul");
+            if (sessionToken) {
+                const logoutItem = document.createElement("li");
+                const logoutLink = document.createElement("a");
+                logoutLink.href = "#";
+                logoutLink.innerText = "Logout";
+                logoutLink.addEventListener("click", () => {
+                    localStorage.removeItem("sessionToken");
+                    alert("You have been logged out.");
+                    location.reload();
+                });
+                logoutItem.appendChild(logoutLink);
+                nav.replaceChild(logoutItem, nav.querySelector("li:last-child"));
+            }
+        }
+
+        updateMenu();
+    </script>
+    <script>
+        updateMenu();
+    </script>
+</body>
+</html>

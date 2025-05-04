@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Advertisement</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Buy</a></li>
+                <li><a href="post.html">Sell</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Post Advertisement</h1>
+        <form id="post-form" enctype="multipart/form-data">
+            <input type="text" id="name" placeholder="Name" required>
+            <input type="number" id="price" placeholder="Price" required>
+            <input type="number" id="rooms" placeholder="Number of Rooms" required>
+            <input type="number" id="area" placeholder="Area (m²)" required>
+            <input type="text" id="location" placeholder="Location" required>
+            <textarea id="description" placeholder="Description" required></textarea>
+            <input type="file" id="image" accept="image/*" required>
+            <button type="submit">Post Property</button>
+        </form>
+        <div id="post-message"></div>
+    </div>
+    <script>
+        function updateMenu() {
+            const sessionToken = localStorage.getItem("sessionToken");
+            const nav = document.querySelector("header nav ul");
+            if (sessionToken) {
+                const logoutItem = document.createElement("li");
+                const logoutLink = document.createElement("a");
+                logoutLink.href = "#";
+                logoutLink.innerText = "Logout";
+                logoutLink.addEventListener("click", () => {
+                    localStorage.removeItem("sessionToken");
+                    alert("You have been logged out.");
+                    location.reload();
+                });
+                logoutItem.appendChild(logoutLink);
+                nav.replaceChild(logoutItem, nav.querySelector("li:last-child"));
+            }
+        }
+
+        updateMenu();
+
+        document.getElementById("post-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const formData = new FormData();
+            formData.append("title", document.getElementById("name").value);
+            formData.append("description", document.getElementById("description").value);
+            formData.append("price", parseFloat(document.getElementById("price").value));
+            formData.append("rooms", parseInt(document.getElementById("rooms").value));
+            formData.append("area", parseFloat(document.getElementById("area").value));
+            formData.append("location", document.getElementById("location").value);
+            const imageFile = document.getElementById("image").files[0];
+            if (imageFile) {
+                formData.append("image", imageFile);
+            }
+
+            const token = localStorage.getItem("sessionToken");
+            if (!token) {
+                alert("You must be logged in to post a property.");
+                return;
+            }
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/properties/", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` },
+                    body: formData,
+                });
+                const data = await response.json();
+                const messageDiv = document.getElementById("post-message");
+                if (response.ok) {
+                    messageDiv.style.color = "green";
+                    messageDiv.innerText = data.message;
+                } else {
+                    messageDiv.style.color = "red";
+                    messageDiv.innerText = data.detail || "An error occurred.";
+                }
+            } catch (error) {
+                document.getElementById("post-message").innerText = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Buy</a></li>
+                <li><a href="post.html">Sell</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Login</h1>
+        <form id="login-form">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        <p>Don't have an account? <a href="register.html">Register here</a>.</p>
+        <div id="login-message"></div>
+    </div>
+    <script>
+        document.getElementById("login-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            const response = await fetch("http://127.0.0.1:8000/login/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+            });
+            const messageDiv = document.getElementById("login-message");
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem("sessionToken", data.token);
+                messageDiv.style.color = "green";
+                messageDiv.innerText = data.message;
+                window.location.href = "index.html";
+            } else {
+                const error = await response.json();
+                messageDiv.style.color = "red";
+                messageDiv.innerText = error.detail;
+            }
+        });
+
+        function updateMenu() {
+            const sessionToken = localStorage.getItem("sessionToken");
+            const nav = document.querySelector("header nav ul");
+            if (sessionToken) {
+                const logoutItem = document.createElement("li");
+                const logoutLink = document.createElement("a");
+                logoutLink.href = "#";
+                logoutLink.innerText = "Logout";
+                logoutLink.addEventListener("click", () => {
+                    localStorage.removeItem("sessionToken");
+                    alert("You have been logged out.");
+                    location.reload();
+                });
+                logoutItem.appendChild(logoutLink);
+                nav.replaceChild(logoutItem, nav.querySelector("li:last-child"));
+            }
+        }
+
+        updateMenu();
+    </script>
+</body>
+</html>

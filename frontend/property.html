@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Details</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #property-details img {
+            display: block;
+            margin: 20px auto;
+            max-width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Buy</a></li>
+                <li><a href="post.html">Sell</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container" id="property-details">
+        <h1>Loading...</h1>
+    </div>
+    <script>
+        function updateMenu() {
+            const sessionToken = localStorage.getItem("sessionToken");
+            const nav = document.querySelector("header nav ul");
+            if (sessionToken) {
+                const logoutItem = document.createElement("li");
+                const logoutLink = document.createElement("a");
+                logoutLink.href = "#";
+                logoutLink.innerText = "Logout";
+                logoutLink.addEventListener("click", () => {
+                    localStorage.removeItem("sessionToken");
+                    alert("You have been logged out.");
+                    location.reload();
+                });
+                logoutItem.appendChild(logoutLink);
+                nav.replaceChild(logoutItem, nav.querySelector("li:last-child"));
+            }
+        }
+
+        async function fetchPropertyDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const propertyId = params.get("id");
+            if (!propertyId) {
+                document.getElementById("property-details").innerHTML = "<p>Invalid property ID.</p>";
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/properties/${propertyId}`);
+                if (!response.ok) throw new Error("Failed to fetch property details.");
+                const property = await response.json();
+
+                document.getElementById("property-details").innerHTML = `
+                    <h1>${property.title}</h1>
+                    <img src="${property.image_path}" alt="Property Image">
+                    <p><strong>Description:</strong> ${property.description}</p>
+                    <p><strong>Price:</strong> ${property.price} Ft</p>
+                    <p><strong>Location:</strong> ${property.location}</p>
+                    <p><strong>Rooms:</strong> ${property.rooms}</p>
+                    <p><strong>Area:</strong> ${property.area} m²</p>
+                    <p><strong>Posted by:</strong> ${property.username}</p>
+                `;
+            } catch (error) {
+                document.getElementById("property-details").innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        fetchPropertyDetails();
+        updateMenu();
+    </script>
+</body>
+</html>

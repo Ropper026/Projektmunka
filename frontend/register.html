@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Buy</a></li>
+                <li><a href="post.html">Sell</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Register</h1>
+        <form id="register-form">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <input type="password" id="confirm-password" placeholder="Confirm Password" required>
+            <button type="submit">Register</button>
+        </form>
+        <div id="register-message"></div>
+    </div>
+    <script>
+        document.getElementById("register-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("confirm-password").value;
+
+            if (password !== confirmPassword) {
+                document.getElementById("register-message").innerText = "Passwords do not match.";
+                return;
+            }
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/register/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password }),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    window.location.href = "success.html";
+                } else {
+                    document.getElementById("register-message").innerText = data.detail;
+                }
+            } catch {
+                document.getElementById("register-message").innerText = "An error occurred. Please try again.";
+            }
+        });
+    </script>
+</body>
+</html>

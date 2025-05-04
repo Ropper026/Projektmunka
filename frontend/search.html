@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Buy</a></li>
+                <li><a href="post.html">Sell</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Search</h1>
+        <p>Search for properties here.</p>
+        <form id="search-form">
+            <input type="text" id="query" placeholder="Search by keyword or location">
+            <div class="price-container">
+                <input type="number" id="min-price" placeholder="Min Price">
+                <span>Ft</span>
+            </div>
+            <div class="price-container">
+                <input type="number" id="max-price" placeholder="Max Price">
+                <span>Ft</span>
+            </div>
+            <input type="number" id="min-rooms" placeholder="Min Rooms">
+            <input type="number" id="max-rooms" placeholder="Max Rooms">
+            <input type="number" id="min-area" placeholder="Min Area (m²)">
+            <input type="number" id="max-area" placeholder="Max Area (m²)">
+            <button type="submit">Search</button>
+        </form>
+        <div id="search-results"></div>
+    </div>
+    <script>
+        function updateMenu() {
+            const sessionToken = localStorage.getItem("sessionToken");
+            const nav = document.querySelector("header nav ul");
+            if (sessionToken) {
+                const logoutItem = document.createElement("li");
+                const logoutLink = document.createElement("a");
+                logoutLink.href = "#";
+                logoutLink.innerText = "Logout";
+                logoutLink.addEventListener("click", () => {
+                    localStorage.removeItem("sessionToken");
+                    alert("You have been logged out.");
+                    location.reload();
+                });
+                logoutItem.appendChild(logoutLink);
+                nav.replaceChild(logoutItem, nav.querySelector("li:last-child"));
+            }
+        }
+
+        updateMenu();
+
+        document.getElementById("search-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const query = document.getElementById("query").value.toLowerCase();
+            const minPrice = parseFloat(document.getElementById("min-price").value) || 0;
+            const maxPrice = parseFloat(document.getElementById("max-price").value) || Infinity;
+            const minRooms = parseInt(document.getElementById("min-rooms").value) || 0;
+            const maxRooms = parseInt(document.getElementById("max-rooms").value) || Infinity;
+            const minArea = parseFloat(document.getElementById("min-area").value) || 0;
+            const maxArea = parseFloat(document.getElementById("max-area").value) || Infinity;
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/properties/");
+                const data = await response.json();
+                const resultsDiv = document.getElementById("search-results");
+                resultsDiv.innerHTML = "";
+
+                if (data.properties.length === 0) {
+                    resultsDiv.innerHTML = "<p>No properties found.</p>";
+                    return;
+                }
+
+                resultsDiv.style.display = "grid";
+                resultsDiv.style.gridTemplateColumns = "repeat(3, 1fr)";
+                resultsDiv.style.gap = "20px";
+
+                const filteredProperties = data.properties.filter(property => {
+                    const matchesQuery = query === "" || property.title.toLowerCase().includes(query) || property.location.toLowerCase().includes(query);
+                    const matchesPrice = property.price >= minPrice && property.price <= maxPrice;
+                    const matchesRooms = property.rooms >= minRooms && property.rooms <= maxRooms;
+                    const matchesArea = property.area >= minArea && property.area <= maxArea;
+                    return matchesQuery && matchesPrice && matchesRooms && matchesArea;
+                });
+
+                if (filteredProperties.length === 0) {
+                    resultsDiv.innerHTML = "<p>No properties match your criteria.</p>";
+                    return;
+                }
+
+                filteredProperties.forEach(property => {
+                    const propertyElement = document.createElement("div");
+                    propertyElement.className = "property-box";
+                    const imagePath = property.image_path 
+                        ? property.image_path 
+                        : "http://127.0.0.1:8000/static/Képernyőkép%202022-03-07%20173334.png";
+                    propertyElement.innerHTML = `
+                        <a href="property.html?id=${property.id}" style="text-decoration:none; color:inherit;">
+                            <img src="${imagePath}" 
+                                 alt="Property Image" 
+                                 style="width:100%; height:150px; object-fit:cover; border-radius:6px; margin-bottom:10px;">
+                            <h3>${property.title}</h3>
+                            <p>${property.description}</p>
+                            <p><strong>Price:</strong> ${property.price} Ft</p>
+                            <p><strong>Location:</strong> ${property.location}</p>
+                        </a>
+                    `;
+                    resultsDiv.appendChild(propertyElement);
+                });
+            } catch (error) {
+                console.error("Error fetching properties:", error);
+                document.getElementById("search-results").innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+    <script>
+        updateMenu();
+    </script>
+</body>
+</html>
