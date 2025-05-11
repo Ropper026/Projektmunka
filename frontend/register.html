@@ -13,6 +13,7 @@
                 <li><a href="index.html">Home</a></li>
                 <li><a href="search.html">Buy</a></li>
                 <li><a href="post.html">Sell</a></li>
+                <li><a href="profile.html">Profile</a></li>
                 <li><a href="login.html">Login</a></li>
             </ul>
         </nav>
@@ -55,6 +56,17 @@
                 document.getElementById("register-message").innerText = "An error occurred. Please try again.";
             }
         });
+
+        function updateMenu() {
+            const profileMenuItem = document.querySelector('nav ul li a[href="profile.html"]');
+            if (profileMenuItem) {
+                profileMenuItem.parentElement.remove();
+            }
+        }
+    </script>
+    <script src="app.js"></script>
+    <script>
+        updateMenu();
     </script>
 </body>
 </html>

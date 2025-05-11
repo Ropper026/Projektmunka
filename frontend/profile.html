@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Buy</a></li>
+                <li><a href="post.html">Sell</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Your Profile</h1>
+        <div id="profile-info">
+            <p>Loading...</p>
+        </div>
+        <h2>Properties:</h2>
+        <div id="profile-properties"></div>
+    </div>
+    <script>
+        async function fetchProfile() {
+            const sessionToken = localStorage.getItem("sessionToken");
+            if (!sessionToken) {
+                alert("You must be logged in to view your profile.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/profile/", {
+                    headers: { "Authorization": `Bearer ${sessionToken}` }
+                });
+                if (response.status === 401) {
+                    alert("Session expired. Please log in again.");
+                    localStorage.removeItem("sessionToken");
+                    window.location.href = "login.html";
+                    return;
+                }
+                if (!response.ok) throw new Error("Failed to fetch profile information.");
+                const profile = await response.json();
+
+                document.getElementById("profile-info").innerHTML = `
+                    <p><strong>Username:</strong> ${profile.username}</p>
+                `;
+
+                const propertiesHtml = profile.properties.map(property => `
+                    <div class="property-card">
+                        <img src="${property.image_path || 'placeholder.jpg'}" alt="Property Image">
+                        <h3>${property.title}</h3>
+                        <p><strong>Price:</strong> ${property.price.toLocaleString("hu-HU")} Ft</p>
+                        <p><strong>Location:</strong> ${property.location}</p>
+                        <a href="property.html?id=${property.id}" style="text-decoration:none; color:#1976d2;">View Details</a>
+                        <div style="margin-top: 10px;">
+                            <button onclick="editProperty(${property.id})" style="margin-right: 10px; border-radius: 8px; padding: 8px 16px;">Edit</button>
+                            <button onclick="deleteProperty(${property.id})" style="background-color: red; color: white; border-radius: 8px; padding: 8px 16px;">Delete</button>
+                        </div>
+                    </div>
+                `).join("");
+
+                document.getElementById("profile-properties").innerHTML = propertiesHtml;
+            } catch (error) {
+                document.getElementById("profile-info").innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        async function editProperty(propertyId) {
+            window.location.href = `edit.html?id=${propertyId}`;
+        }
+
+        async function deleteProperty(propertyId) {
+            if (!confirm("Are you sure you want to delete this property?")) return;
+
+            const sessionToken = localStorage.getItem("sessionToken");
+            if (!sessionToken) {
+                alert("You must be logged in to delete a property.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/properties/${propertyId}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${sessionToken}` }
+                });
+                if (!response.ok) throw new Error("Failed to delete property.");
+                alert("Property deleted successfully.");
+                fetchProfile();
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        fetchProfile();
+
+        function updateMenu() {
+            const profileMenuItem = document.querySelector('nav ul li a[href="profile.html"]');
+            if (profileMenuItem) {
+                profileMenuItem.parentElement.remove();
+            }
+        }
+
+        updateMenu();
+    </script>
+    <script src="app.js"></script>
+    <script>
+        updateMenu();
+    </script>
+</body>
+</html>

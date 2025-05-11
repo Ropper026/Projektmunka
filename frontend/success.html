@@ -13,6 +13,7 @@
                 <li><a href="index.html">Home</a></li>
                 <li><a href="search.html">Buy</a></li>
                 <li><a href="post.html">Sell</a></li>
+                <li><a href="profile.html">Profile</a></li>
                 <li><a href="login.html">Login</a></li>
             </ul>
         </nav>
@@ -21,26 +22,5 @@
         <h1>Registration Successful</h1>
         <p>Thank you for registering! You can now <a href="login.html">log in</a> to your account.</p>
     </div>
-    <script>
-        function updateMenu() {
-            const sessionToken = localStorage.getItem("sessionToken");
-            const nav = document.querySelector("header nav ul");
-            if (sessionToken) {
-                const logoutItem = document.createElement("li");
-                const logoutLink = document.createElement("a");
-                logoutLink.href = "#";
-                logoutLink.innerText = "Logout";
-                logoutLink.addEventListener("click", () => {
-                    localStorage.removeItem("sessionToken");
-                    alert("You have been logged out.");
-                    location.reload();
-                });
-                logoutItem.appendChild(logoutLink);
-                nav.replaceChild(logoutItem, nav.querySelector("li:last-child"));
-            }
-        }
-
-        updateMenu();
-    </script>
 </body>
 </html>

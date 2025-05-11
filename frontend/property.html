@@ -23,6 +23,7 @@
                 <li><a href="index.html">Home</a></li>
                 <li><a href="search.html">Buy</a></li>
                 <li><a href="post.html">Sell</a></li>
+                <li><a href="profile.html">Profile</a></li>
                 <li><a href="login.html">Login</a></li>
             </ul>
         </nav>
@@ -46,6 +47,11 @@
                 });
                 logoutItem.appendChild(logoutLink);
                 nav.replaceChild(logoutItem, nav.querySelector("li:last-child"));
+            } else {
+                const profileItem = nav.querySelector("li:nth-last-child(2)");
+                if (profileItem && profileItem.textContent.trim() === "Profile") {
+                    nav.removeChild(profileItem);
+                }
             }
         }
 
@@ -65,8 +71,8 @@
                 document.getElementById("property-details").innerHTML = `
                     <h1>${property.title}</h1>
                     <img src="${property.image_path}" alt="Property Image">
-                    <p><strong>Description:</strong> ${property.description}</p>
-                    <p><strong>Price:</strong> ${property.price} Ft</p>
+                    <p><strong>Description:</strong> ${property.description.replace(/\n/g, "<br>")}</p>
+                    <p><strong>Price:</strong> ${property.price.toLocaleString("hu-HU")} Ft</p>
                     <p><strong>Location:</strong> ${property.location}</p>
                     <p><strong>Rooms:</strong> ${property.rooms}</p>
                     <p><strong>Area:</strong> ${property.area} m²</p>
@@ -78,6 +84,9 @@
         }
 
         fetchPropertyDetails();
+    </script>
+    <script src="app.js"></script>
+    <script>
         updateMenu();
     </script>
 </body>

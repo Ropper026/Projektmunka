@@ -28,7 +28,21 @@ fetchProperties();
 function updateMenu() {
     const sessionToken = localStorage.getItem("sessionToken");
     const nav = document.querySelector("header nav ul");
+
+    nav.querySelectorAll("li").forEach(item => {
+        if (["Profile", "Logout", "Login"].includes(item.textContent.trim())) {
+            item.remove();
+        }
+    });
+
     if (sessionToken) {
+        const profileItem = document.createElement("li");
+        const profileLink = document.createElement("a");
+        profileLink.href = "profile.html";
+        profileLink.innerText = "Profile";
+        profileItem.appendChild(profileLink);
+        nav.appendChild(profileItem);
+
         const logoutItem = document.createElement("li");
         const logoutLink = document.createElement("a");
         logoutLink.href = "#";
@@ -39,7 +53,14 @@ function updateMenu() {
             location.reload();
         });
         logoutItem.appendChild(logoutLink);
-        nav.replaceChild(logoutItem, nav.querySelector("li:last-child"));
+        nav.appendChild(logoutItem);
+    } else {
+        const loginItem = document.createElement("li");
+        const loginLink = document.createElement("a");
+        loginLink.href = "login.html";
+        loginLink.innerText = "Login";
+        loginItem.appendChild(loginLink);
+        nav.appendChild(loginItem);
     }
 }
 

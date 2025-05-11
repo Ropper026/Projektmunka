@@ -7,16 +7,8 @@ import sqlite3
 import secrets
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
-import os
-import logging
 from fastapi.staticfiles import StaticFiles
 
-
-logging.basicConfig(level=logging.INFO)
-
-os.makedirs("images", exist_ok=True)
-
-os.makedirs("static", exist_ok=True)
 
 create_database()
 create_user_database()
@@ -33,14 +25,6 @@ app.add_middleware(
 
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-class Property(BaseModel):
-    title: str
-    description: str
-    price: float
-    location: str
-
 class User(BaseModel):
     username: str
     password: str
@@ -51,21 +35,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     if token not in sessions:
-        raise HTTPException(status_code=401, detail="Invalid or expired session")
+        raise HTTPException(status_code=401, detail="Invalid or expired session token")
     return sessions[token]
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the Property Agent API!"}
 
 @app.get("/properties/")
 def get_properties(query: str = None):
     connection = get_db_connection()
     cursor = connection.cursor()
-    if query:
-        cursor.execute("SELECT * FROM properties WHERE title LIKE ? OR location LIKE ?", (f"%{query}%", f"%{query}%"))
-    else:
-        cursor.execute("SELECT * FROM properties")
+    query_condition = "WHERE title LIKE ? OR location LIKE ?" if query else ""
+    cursor.execute(f"SELECT * FROM properties {query_condition}", (f"%{query}%", f"%{query}%") if query else ())
     properties = cursor.fetchall()
     connection.close()
 
@@ -96,7 +74,6 @@ async def create_property(
     image: UploadFile = File(None),
     current_user: str = Depends(get_current_user)
 ):
-    logging.info("Received request to create property")
     connection = get_db_connection()
     cursor = connection.cursor()
 
@@ -107,9 +84,7 @@ async def create_property(
             image_path = f"images/{image_filename}"
             with open(image_path, "wb") as buffer:
                 shutil.copyfileobj(image.file, buffer)
-            logging.info(f"Image saved at {image_path}")
         except Exception as e:
-            logging.error(f"Failed to save image: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
 
     try:
@@ -118,9 +93,7 @@ async def create_property(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (title, description, price, location, rooms, area, image_filename, current_user))
         connection.commit()
-        logging.info("Property inserted into database")
     except sqlite3.Error as e:
-        logging.error(f"Database error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to insert property into database")
     finally:
         connection.close()
@@ -149,13 +122,64 @@ def get_property(property_id: int):
     }
 
 @app.delete("/properties/{property_id}")
-def delete_property(property_id: int):
+def delete_property(property_id: int, current_user: str = Depends(get_current_user)):
     connection = get_db_connection()
     cursor = connection.cursor()
+    cursor.execute("SELECT username FROM properties WHERE id = ?", (property_id,))
+    property_owner = cursor.fetchone()
+    if property_owner is None:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if property_owner[0] != current_user:
+        raise HTTPException(status_code=403, detail="You are not authorized to delete this property")
     cursor.execute("DELETE FROM properties WHERE id = ?", (property_id,))
     connection.commit()
     connection.close()
     return {"message": "Property deleted successfully!"}
+
+@app.put("/properties/{property_id}")
+async def update_property(
+    property_id: int,
+    title: str = Form(...),
+    description: str = Form(...),
+    price: float = Form(...),
+    location: str = Form(...),
+    rooms: int = Form(...),
+    area: float = Form(...),
+    image: UploadFile = File(None),
+    current_user: str = Depends(get_current_user)
+):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("SELECT username, image_path FROM properties WHERE id = ?", (property_id,))
+    property_owner = cursor.fetchone()
+    if property_owner is None:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if property_owner[0] != current_user:
+        raise HTTPException(status_code=403, detail="You are not authorized to edit this property")
+
+    image_filename = property_owner[1]
+    if image:
+        try:
+            image_filename = image.filename
+            image_path = f"images/{image_filename}"
+            with open(image_path, "wb") as buffer:
+                shutil.copyfileobj(image.file, buffer)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
+
+    try:
+        cursor.execute("""
+            UPDATE properties
+            SET title = ?, description = ?, price = ?, location = ?, rooms = ?, area = ?, image_path = ?
+            WHERE id = ?
+        """, (title, description, price, location, rooms, area, image_filename, property_id))
+        connection.commit()
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail="Failed to update property")
+    finally:
+        connection.close()
+
+    return {"message": "Property updated successfully!"}
 
 @app.post("/register/")
 def register_user(user: User):
@@ -184,3 +208,28 @@ def login_user(user: User):
     session_token = secrets.token_hex(16)
     sessions[session_token] = user.username
     return {"message": "Login successful", "token": session_token}
+
+@app.get("/profile/")
+def get_profile(current_user: str = Depends(get_current_user)):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM properties WHERE username = ?", (current_user,))
+    properties = cursor.fetchall()
+    connection.close()
+
+    return {
+        "username": current_user,
+        "properties": [
+            {
+                "id": row[0],
+                "title": row[1],
+                "description": row[2],
+                "price": row[3],
+                "location": row[4],
+                "rooms": row[5],
+                "area": row[6],
+                "image_path": f"http://127.0.0.1:8000/images/{row[7]}" if row[7] else None,
+            }
+            for row in properties
+        ]
+    }

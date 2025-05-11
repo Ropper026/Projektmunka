@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Property</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Buy</a></li>
+                <li><a href="post.html">Sell</a></li>
+                <li><a href="profile.html">Profile</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Edit Property</h1>
+        <form id="edit-form" enctype="multipart/form-data">
+            <input type="text" id="name" placeholder="Name" required>
+            <input type="number" id="price" placeholder="Price" required>
+            <input type="number" id="rooms" placeholder="Number of Rooms" required>
+            <input type="number" id="area" placeholder="Area (m²)" required>
+            <input type="text" id="location" placeholder="Location" required>
+            <textarea id="description" placeholder="Description" required></textarea>
+            <input type="file" id="image" accept="image/*">
+            <button type="submit">Save Changes</button>
+        </form>
+        <div id="edit-message"></div>
+    </div>
+    <script src="app.js"></script>
+    <script>
+        let currentImagePath = null;
+
+        async function fetchPropertyDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const propertyId = params.get("id");
+            if (!propertyId) {
+                document.getElementById("edit-message").innerText = "Invalid property ID.";
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/properties/${propertyId}`);
+                if (!response.ok) throw new Error("Failed to fetch property details.");
+                const property = await response.json();
+
+                document.getElementById("name").value = property.title;
+                document.getElementById("price").value = property.price;
+                document.getElementById("rooms").value = property.rooms;
+                document.getElementById("area").value = property.area;
+                document.getElementById("location").value = property.location;
+                document.getElementById("description").value = property.description;
+                currentImagePath = property.image_path;
+            } catch (error) {
+                document.getElementById("edit-message").innerText = `Error: ${error.message}`;
+            }
+        }
+
+        document.getElementById("edit-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const params = new URLSearchParams(window.location.search);
+            const propertyId = params.get("id");
+            const sessionToken = localStorage.getItem("sessionToken");
+
+            if (!sessionToken) {
+                alert("You must be logged in to edit a property.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("title", document.getElementById("name").value);
+            formData.append("description", document.getElementById("description").value);
+            formData.append("price", parseFloat(document.getElementById("price").value));
+            formData.append("rooms", parseInt(document.getElementById("rooms").value));
+            formData.append("area", parseFloat(document.getElementById("area").value));
+            formData.append("location", document.getElementById("location").value);
+
+            const imageFile = document.getElementById("image").files[0];
+            if (imageFile) {
+                formData.append("image", imageFile);
+            } else if (currentImagePath) {
+                formData.append("image_path", currentImagePath);
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/properties/${propertyId}`, {
+                    method: "PUT",
+                    headers: { "Authorization": `Bearer ${sessionToken}` },
+                    body: formData,
+                });
+                const data = await response.json();
+                const messageDiv = document.getElementById("edit-message");
+                if (response.ok) {
+                    messageDiv.style.color = "green";
+                    messageDiv.innerText = data.message;
+                    setTimeout(() => {
+                        window.location.href = "profile.html";
+                    }, 2000);
+                } else {
+                    messageDiv.style.color = "red";
+                    messageDiv.innerText = data.detail || "An error occurred.";
+                }
+            } catch (error) {
+                document.getElementById("edit-message").innerText = `Error: ${error.message}`;
+            }
+        });
+
+        function updateMenu() {
+            const sessionToken = localStorage.getItem("sessionToken");
+            const menu = document.querySelector("nav ul");
+            if (sessionToken) {
+                const profileItem = document.createElement("li");
+                profileItem.innerHTML = '<a href="profile.html">Profile</a>';
+                menu.appendChild(profileItem);
+            } else {
+                const profileLink = menu.querySelector('a[href="profile.html"]');
+                if (profileLink) {
+                    profileLink.parentElement.remove();
+                }
+            }
+        }
+
+        fetchPropertyDetails();
+        updateMenu();
+    </script>
+</body>
+</html>
